@@ -11,10 +11,10 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "promise-polyfill": "^6.0.2"
+    "promise-polyfill": "^7.0.0"
   },
   "devDependencies": {
-    "@types/node": "^8.0.47",
+    "@types/node": "^8.5.2",
     "gulp": "gulpjs/gulp#4.0"
   },
   "repository": {
