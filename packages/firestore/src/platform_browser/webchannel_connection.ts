@@ -35,7 +35,7 @@ import { assert, fail } from '../util/assert';
 import { Code, FirestoreError } from '../util/error';
 import * as log from '../util/log';
 import { Rejecter, Resolver } from '../util/promise';
-import {StringMap} from '../util/types';
+import { StringMap } from '../util/types';
 
 const LOG_TAG = 'Connection';
 
@@ -55,7 +55,6 @@ const X_GOOG_API_CLIENT_VALUE = 'gl-js/ fire/' + SDK_VERSION;
 
 const XHR_TIMEOUT_SECS = 15;
 
-
 export class WebChannelConnection implements Connection {
   private readonly databaseId: DatabaseId;
   private readonly baseUrl: string;
@@ -72,10 +71,7 @@ export class WebChannelConnection implements Connection {
    * Modifies the headers for a request, adding any authorization token if
    * present and any additional headers for the request.
    */
-  private modifyHeadersForRequest(
-    headers: StringMap,
-    token: Token | null
-  ) {
+  private modifyHeadersForRequest(headers: StringMap, token: Token | null) {
     if (token) {
       for (const header in token.authHeaders) {
         if (token.authHeaders.hasOwnProperty(header)) {
@@ -91,7 +87,11 @@ export class WebChannelConnection implements Connection {
       `databases/${this.databaseId.database}`;
   }
 
-  invokeRPC<Req, Resp>(rpcName: string, request: Req, token: Token | null): Promise<Resp> {
+  invokeRPC<Req, Resp>(
+    rpcName: string,
+    request: Req,
+    token: Token | null
+  ): Promise<Resp> {
     const url = this.makeUrl(rpcName);
 
     return new Promise((resolve: Resolver<Resp>, reject: Rejecter) => {
@@ -180,7 +180,10 @@ export class WebChannelConnection implements Connection {
     return this.invokeRPC<Req, Resp[]>(rpcName, request, token);
   }
 
-  openStream<Req, Resp>(rpcName: string, token: Token | null): Stream<Req, Resp> {
+  openStream<Req, Resp>(
+    rpcName: string,
+    token: Token | null
+  ): Stream<Req, Resp> {
     const urlParts = [
       this.baseUrl,
       '/',
@@ -290,43 +293,47 @@ export class WebChannelConnection implements Connection {
       }
     });
 
-    unguardedEventListen(WebChannel.EventType.MESSAGE, (msg:  { data : Resp[] } ) => {
-      if (!closed) {
-        // WebChannel delivers message events as array. If batching
-        // is not enabled (it's off by default) each message will be
-        // delivered alone, resulting in a single element array.
-        const msgData = msg.data[0];
-        assert(!!msgData, 'Got a webchannel message without data.');
-        // TODO(b/35143891): There is a bug in One Platform that caused errors
-        // (and only errors) to be wrapped in an extra array. To be forward
-        // compatible with the bug we need to check either condition. The latter
-        // can be removed once the fix has been rolled out.
-        // tslint:disable-next-line:no-any msgData.error is not typed.
-        const error = (msgData as any).error || (msgData[0] && msgData[0].error);
-        if (error) {
-          log.debug(LOG_TAG, 'WebChannel received error:', error);
-          // error.status will be a string like 'OK' or 'NOT_FOUND'.
-          const status: string = error.status;
-          let code = mapCodeFromRpcStatus(status);
-          let message = error.message;
-          if (code === undefined) {
-            code = Code.INTERNAL;
-            message =
-              'Unknown error status: ' +
-              status +
-              ' with message ' +
-              error.message;
+    unguardedEventListen(
+      WebChannel.EventType.MESSAGE,
+      (msg: { data: Resp[] }) => {
+        if (!closed) {
+          // WebChannel delivers message events as array. If batching
+          // is not enabled (it's off by default) each message will be
+          // delivered alone, resulting in a single element array.
+          const msgData = msg.data[0];
+          assert(!!msgData, 'Got a webchannel message without data.');
+          // TODO(b/35143891): There is a bug in One Platform that caused errors
+          // (and only errors) to be wrapped in an extra array. To be forward
+          // compatible with the bug we need to check either condition. The latter
+          // can be removed once the fix has been rolled out.
+          // tslint:disable-next-line:no-any msgData.error is not typed.
+          const error =
+            (msgData as any).error || (msgData[0] && msgData[0].error);
+          if (error) {
+            log.debug(LOG_TAG, 'WebChannel received error:', error);
+            // error.status will be a string like 'OK' or 'NOT_FOUND'.
+            const status: string = error.status;
+            let code = mapCodeFromRpcStatus(status);
+            let message = error.message;
+            if (code === undefined) {
+              code = Code.INTERNAL;
+              message =
+                'Unknown error status: ' +
+                status +
+                ' with message ' +
+                error.message;
+            }
+            // Mark closed so no further events are propagated
+            closed = true;
+            streamBridge.callOnClose(new FirestoreError(code, message));
+            channel.close();
+          } else {
+            log.debug(LOG_TAG, 'WebChannel received:', msgData);
+            streamBridge.callOnMessage(msgData);
           }
-          // Mark closed so no further events are propagated
-          closed = true;
-          streamBridge.callOnClose(new FirestoreError(code, message));
-          channel.close();
-        } else {
-          log.debug(LOG_TAG, 'WebChannel received:', msgData);
-          streamBridge.callOnMessage(msgData);
         }
       }
-    });
+    );
 
     setTimeout(() => {
       // Technically we could/should wait for the WebChannel opened event,

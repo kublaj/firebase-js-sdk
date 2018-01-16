@@ -43,8 +43,11 @@ const X_GOOG_API_CLIENT_VALUE = `gl-node/${process.versions.node} fire/${
 } grpc/${grpcVersion}`;
 
 type DuplexRpc = () => grpc.ClientDuplexStream;
-type ReadableRpc<Req> = (req:Req) => grpc.ClientReadableStream;
-type UnaryRpc<Req, Resp> = (req, callback:(err?: grpc.ServiceError, resp?: Resp) => void) => grpc.ClientUnaryCall;
+type ReadableRpc<Req> = (req: Req) => grpc.ClientReadableStream;
+type UnaryRpc<Req, Resp> = (
+  req,
+  callback: (err?: grpc.ServiceError, resp?: Resp) => void
+) => grpc.ClientUnaryCall;
 
 function createHeaders(databaseInfo: DatabaseInfo, token: Token | null): {} {
   assert(
@@ -122,9 +125,8 @@ export class GrpcConnection implements Connection {
     return valueA === valueB;
   }
 
-
   // tslint:disable-next-line:no-any
-  private ensureActiveStub(token: Token | null) : any {
+  private ensureActiveStub(token: Token | null): any {
     if (!this.cachedStub || !this.sameToken(this.cachedStub.token, token)) {
       log.debug(LOG_TAG, 'Creating Firestore stub.');
       const credentials = createHeaders(this.databaseInfo, token);
@@ -137,7 +139,9 @@ export class GrpcConnection implements Connection {
     return this.cachedStub.stub;
   }
 
-  private getRpcCallable<Req, Resp>(rpcName: string): (UnaryRpc<Req, Resp>|ReadableRpc<Req>|DuplexRpc) {
+  private getRpcCallable<Req, Resp>(
+    rpcName: string
+  ): UnaryRpc<Req, Resp> | ReadableRpc<Req> | DuplexRpc {
     // RPC Methods have the first character lower-cased
     // (e.g. Listen => listen(), BatchGetDocuments => batchGetDocuments()).
     const rpcMethod = rpcName.charAt(0).toLowerCase() + rpcName.slice(1);
@@ -146,25 +150,38 @@ export class GrpcConnection implements Connection {
     return rpc;
   }
 
-  private getUnaryRpc<Req, Resp>(rpcName: string, token: Token | null): UnaryRpc<Req, Resp> {
+  private getUnaryRpc<Req, Resp>(
+    rpcName: string,
+    token: Token | null
+  ): UnaryRpc<Req, Resp> {
     const stub = this.ensureActiveStub(token);
     const rpc = this.getRpcCallable<Req, Resp>(rpcName) as UnaryRpc<Req, Resp>;
     return rpc.bind(stub);
   }
 
-  private getBidirectionalStreamingRpc<Req, Resp>(rpcName: string, token: Token | null): DuplexRpc {
+  private getBidirectionalStreamingRpc<Req, Resp>(
+    rpcName: string,
+    token: Token | null
+  ): DuplexRpc {
     const stub = this.ensureActiveStub(token);
     const rpc = this.getRpcCallable<Req, Resp>(rpcName) as DuplexRpc;
     return rpc.bind(stub);
   }
 
-  private getStreamingRpc<Req, Resp>(rpcName: string, token: Token | null): ReadableRpc<Req> {
+  private getStreamingRpc<Req, Resp>(
+    rpcName: string,
+    token: Token | null
+  ): ReadableRpc<Req> {
     const stub = this.ensureActiveStub(token);
-    const rpc = this.getRpcCallable<Req, Resp>(rpcName) as ReadableRpc<Req> ;
+    const rpc = this.getRpcCallable<Req, Resp>(rpcName) as ReadableRpc<Req>;
     return rpc.bind(stub);
   }
 
-  invokeRPC<Req, Resp>(rpcName: string, request: Req, token: Token | null): Promise<Resp> {
+  invokeRPC<Req, Resp>(
+    rpcName: string,
+    request: Req,
+    token: Token | null
+  ): Promise<Resp> {
     const rpc = this.getUnaryRpc<Req, Resp>(rpcName, token);
     return nodePromise((callback: NodeCallback<Resp>) => {
       log.debug(LOG_TAG, `RPC '${rpcName}' invoked with request:`, request);
@@ -222,7 +239,10 @@ export class GrpcConnection implements Connection {
   }
 
   // TODO(mikelehen): This "method" is a monster. Should be refactored.
-  openStream<Req, Resp>(rpcName: string, token: Token | null): Stream<Req, Resp> {
+  openStream<Req, Resp>(
+    rpcName: string,
+    token: Token | null
+  ): Stream<Req, Resp> {
     const rpc = this.getBidirectionalStreamingRpc(rpcName, token);
     const grpcStream = rpc();
 

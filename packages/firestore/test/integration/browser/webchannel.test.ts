@@ -45,7 +45,10 @@ describeFn('WebChannel', () => {
     const projectId = utilHelpers.DEFAULT_PROJECT_ID;
     const info = utilHelpers.getDefaultDatabaseInfo();
     const conn = new WebChannelConnection(info);
-    const stream = conn.openStream<api.ListenRequest, api.ListenResponse>('Listen', null);
+    const stream = conn.openStream<api.ListenRequest, api.ListenResponse>(
+      'Listen',
+      null
+    );
 
     // Test data
     let didSendBadPayload = false;

@@ -21,7 +21,7 @@ import { AnyJs } from './misc';
 const NumberAsAny = Number as any;
 
 // An Object whose keys and values are Strings.
-export type StringMap = { [key : string] : string };
+export type StringMap = { [key: string]: string };
 
 /**
  * Minimum safe integer in Javascript because of floating point precision.

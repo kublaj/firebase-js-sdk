@@ -27,7 +27,7 @@ import { Stream } from './connection';
  */
 export class StreamBridge<I, O> implements Stream<I, O> {
   private wrappedOnOpen: () => void | undefined;
-  private wrappedOnClose: (err?: FirestoreError) => void  | undefined;
+  private wrappedOnClose: (err?: FirestoreError) => void | undefined;
   private wrappedOnMessage: (msg: O) => void | undefined;
 
   private sendFn: (msg: I) => void;
