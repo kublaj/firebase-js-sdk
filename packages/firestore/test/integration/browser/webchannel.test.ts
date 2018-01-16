@@ -18,6 +18,7 @@ import { expect } from 'chai';
 import { WebChannelConnection } from '../../../src/platform_browser/webchannel_connection';
 import { DatabaseId, DatabaseInfo } from '../../../src/core/database_info';
 import * as utilHelpers from '../util/helpers';
+import * as api from '../../../src/protos/firestore_proto_api';
 
 const describeFn = typeof window !== 'undefined' ? describe : xdescribe;
 describeFn('WebChannel', () => {
@@ -44,7 +45,7 @@ describeFn('WebChannel', () => {
     const projectId = utilHelpers.DEFAULT_PROJECT_ID;
     const info = utilHelpers.getDefaultDatabaseInfo();
     const conn = new WebChannelConnection(info);
-    const stream = conn.openStream('Listen', null);
+    const stream = conn.openStream<api.ListenRequest, api.ListenResponse>('Listen', null);
 
     // Test data
     let didSendBadPayload = false;

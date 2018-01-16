@@ -85,8 +85,8 @@ export class Datastore {
       database: this.serializer.encodedDatabaseId,
       writes: mutations.map(m => this.serializer.toMutation(m))
     };
-    return this.invokeRPC('Commit', params).then(
-      (response: api.CommitResponse) => {
+    return this.invokeRPC<api.CommitRequest, api.CommitResponse>('Commit', params).then(
+      response => {
         return this.serializer.fromWriteResults(response.writeResults);
       }
     );
@@ -97,8 +97,8 @@ export class Datastore {
       database: this.serializer.encodedDatabaseId,
       documents: keys.map(k => this.serializer.toName(k))
     };
-    return this.invokeStreamingRPC('BatchGetDocuments', params).then(
-      (response: api.BatchGetDocumentsResponse[]) => {
+    return this.invokeStreamingRPC<api.BatchGetDocumentsRequest, api.BatchGetDocumentsResponse>('BatchGetDocuments', params).then(
+      response => {
         let docs = maybeDocumentMap();
         response.forEach(proto => {
           const doc = this.serializer.fromMaybeDocument(proto);
@@ -116,18 +116,18 @@ export class Datastore {
   }
 
   /** Gets an auth token and invokes the provided RPC. */
-  private invokeRPC(rpcName: string, request: any): Promise<any> {
+  private invokeRPC<Req,Resp>(rpcName: string, request: Req): Promise<Resp> {
     // TODO(mikelehen): Retry (with backoff) on token failures?
     return this.credentials.getToken(/*forceRefresh=*/ false).then(token => {
-      return this.connection.invokeRPC(rpcName, request, token);
+      return this.connection.invokeRPC<Req,Resp>(rpcName, request, token);
     });
   }
 
   /** Gets an auth token and invokes the provided RPC with streamed results. */
-  private invokeStreamingRPC(rpcName: string, request: any): Promise<any> {
+  private invokeStreamingRPC<Req,Resp>(rpcName: string, request: Req): Promise<Resp[]> {
     // TODO(mikelehen): Retry (with backoff) on token failures?
     return this.credentials.getToken(/*forceRefresh=*/ false).then(token => {
-      return this.connection.invokeStreamingRPC(rpcName, request, token);
+      return this.connection.invokeStreamingRPC<Req,Resp>(rpcName, request, token);
     });
   }
 }
